@@ -6,26 +6,46 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.estados.ui.theme.EstadosTheme
+
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.Icon
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.runtime.toMutableStateList
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -33,9 +53,38 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             EstadosTheme {
+                /*
+                *
+                *  STATE HOISTING
+                *
+                * Es un patron de Jetpack Compose que indica que los estados no deben ser creados y manejados por el mismo componente
+                * es por esto que los componentes que requieran estados persitentes como remember o rememberSaveable deberan
+                * recibir mediante parametro el estado y una funcion callback para trabajar con los estados y
+                * el padre del composable será el encargado de crear el estado y pasarlo junto a la callback.
+                *
+                * En otras palabras el padre crea el patron y el hijo lo recibe por parametro
+                * ver Ej: Padre - hijo
+                *
+                *
+                * DERIVED STATE OF - ESTADO DERIVADO DE OTRO
+                *
+                * Es una funcion de Jetpack Compose usada para crear un estado
+                * que deriva o depende de otro, se utiliza dentro de remember y devuelve un State,
+                * esto indica que su valor se actualizará solo automaticamente cuando cambie el estado
+                * del cual depende. Util cuando el calculo a realizar es pesado,
+                * por ejemplo al hacer filtrados, sumatorias, búsquedas, etc.
+                * ver Ej: EstadoDerivado
+                *
+                * */
+
                 //EjemploRecordarEstado() // funcional, pero no recomendada, ya que la variable de estado la almacena el mismo componente. Ademas el valor del estado se pierde al girar pantalla.
                 //ContadorScreen() // recomendada: en esta se llama al padre y este llama al hijo, y en el padre se declara el estado que luego se pasa al componente que lo usa, es decir el hijo
-                EjemploRecordarEstadoConGiroPantalla() // mantiene el valor del estado incluso al girar la pantalla
+                //EjemploRecordarEstadoConGiroPantalla() // mantiene el valor del estado incluso al girar la pantalla
+                //Padre() // ejemplo de state hoisting
+                //EstadoDerivado() // ejemplo de un estado dependiente o derivado de otro
+                //EstadoDerivado2() //ejemplo 2, muestra el cambio de color segun la cantidad de caracteres introducida
+                //MiListaMutable() // ejercicio con lista mutable y manejo de estados
+                MiListaMutablePersistente() // ejercicio con lista mutable PERSISTENTE, es decir almacena los valores incluso al rotar la pantalla
             }
         }
     }
@@ -96,6 +145,7 @@ fun EjemploRecordarEstado(){
     * - Para usar BY es necesario tener las siguientes importaciones:
     *   import androidx.compose.runtime.getValue
     *   import androidx.compose.runtime.setValue
+    *
     * */
     var count by remember { mutableIntStateOf(0) }
 
@@ -198,5 +248,268 @@ fun EjemploRecordarEstadoConGiroPantalla(){
             text = "Explicacion: \nUna vez escrito algo en el campo, esto permanecerá allí hasta que se borre manualmente o mediante el btn.",
             style = MaterialTheme.typography.bodySmall
         )
+    }
+}
+
+
+@Composable
+fun Padre(){
+    var count by rememberSaveable { mutableIntStateOf(0) }
+    var myText by rememberSaveable { mutableStateOf("")}
+
+    // Creamos una columna
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // llamamos al componente hijo y le pasamos el estado y la funcion callback
+        Hijo(count, onIncrement = { count++ })
+
+        // llamamos al componente hijo2 y le pasamos el estado y la funcion callback
+        Hijo2(myText, myCallback = { myText=it })
+    }
+}
+
+@Composable
+fun Hijo(count:Int, onIncrement: () -> Unit){
+    // recibimos el estado y la callback function
+
+    // al presionar el btn se incrementará el contador y se actualizará el texto del BTN
+    Button(onClick = onIncrement) {
+        Text("Click N° $count")
+    }
+
+}
+
+@Composable
+fun Hijo2(myTxt: String, myCallback: (String) -> Unit){
+
+    Text(
+        text = myTxt,
+        style = MaterialTheme.typography.bodyLarge,
+        color = MaterialTheme.colorScheme.primary
+    )
+
+    // creamos un input para introducir texto
+    OutlinedTextField(
+        value = myTxt,
+        onValueChange = myCallback,
+        label = { Text("Introduzca un texto") },
+        modifier = Modifier.fillMaxWidth()
+    )
+
+}
+
+@Composable
+fun EstadoDerivado(){
+    /*
+    aplicacion que indica si el numero del contador
+    es par o impar
+    El valor de par se ejecuta automaticamente,
+    cada vez que cambia el valor del estado padre.
+    */
+
+    // una es var ya que esta cambiará su valor constantemente, la otra val ya que no deberia ser posible cambiar el valor directamente
+    // solo debe cambiar su valor al cambiar el valor del estado padre
+    var count by remember { mutableIntStateOf(0) } // estado "padre"
+    val pair by remember { derivedStateOf { count % 2 == 0 } } // estado dependiente del anterior
+
+    // componentes
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = "Contador: $count",
+            style = TextStyle(
+                fontSize = 24.sp,
+                color = Color.Red,
+                textDecoration = TextDecoration.Underline
+            )
+        ) // mostramos el Número del contador
+        Text(text = if (pair) "Número Par" else "Número impar") // mostramos el resultado del calculo de par o impar
+        Button(
+            onClick = {count++}
+        ){
+            Text("Clic aquí")
+        }
+    }
+}
+
+@Composable
+fun EstadoDerivado2(){
+    /*
+    * aplicacion que permite ingresar caracteres
+    * y segun la cantidad cambia el color, recordar
+    * que el estado Hijo solo se actualizará al cambiar el estado padre,
+    * esto ayuda a mejorar el rendimiento de las aplicaciones
+    * */
+    var text by rememberSaveable { mutableStateOf("") }
+    val textColor by remember{
+        derivedStateOf {
+            //if(text.length > 10) Color.Red else Color.Blue
+            calculoLongitudTexto(text) // hace lo mismo que la linea anterior, sin embargo se separa la logica en una funcion aparte
+        }
+    } // debe ser remember y no rememberSaveable ya que de lo contrario se guardaria siempre el mismo valor
+
+    // componentes
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        OutlinedTextField(
+            value = text,
+            onValueChange = { text = it},
+            label = { Text("Introduzca un texto") },
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            modifier = Modifier.padding(16.dp),
+            text = "Longitud: ${text.length}",
+            color = textColor,
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.Bold
+        ) // mostramos el Número del contador
+    }
+}
+
+fun calculoLongitudTexto(text: String): Color{
+    /*
+    * funcion encargada de calcular la longitud de un texto
+    * y segun este, retornar un color acorde
+    * */
+    //if(text.length > 10)
+    //    return Color.Red
+    //return Color.Blue
+
+    return when (text.length){
+        in 0..10 -> Color.Yellow
+        in 10..20 -> Color.Blue
+        in 20..30 -> Color.Red
+        in 30..40 -> Color.Green
+        in 50..60 -> Color.Black
+        in 60..70 -> Color.Magenta
+        in 70..80 -> Color.Cyan
+        in 80..100 -> Color.LightGray
+        else -> Color.Gray
+    }
+}
+
+
+@Composable
+fun MiListaMutable() {
+    /* al utilizar mutableStateListOf, NO se debe usar
+    * rememberSaveable,
+    * para esos casos se hace uso de Saver, ver ejemplo MiListaMutablePersistente
+    *
+    * */
+    val itemList = remember { mutableStateListOf("v1","v2","v3","v4") }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Button(
+            onClick = { itemList.add("v${itemList.size + 1}")}
+        ){
+            Text("Agregar nuevo")
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        LazyColumn {
+
+            items(itemList) { item ->
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(4.dp),
+                    elevation = CardDefaults.cardElevation(4.dp) // sombra de la tarjeta
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(item, style = MaterialTheme.typography.bodyLarge)
+
+                        // boton de eliminacion de elemento
+                        IconButton(
+                            onClick = { itemList.remove(item) }
+                        ) {
+                            Icon(Icons.Default.Delete, contentDescription = "Eliminar")
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+@Composable
+fun MiListaMutablePersistente() {
+    /*
+    * esta listaMutable SI será persistente, debido a que se utiliza
+    * listSaver<SnapshotStateList<String>, String>
+    * */
+    val listSaver = listSaver<SnapshotStateList<String>, String>(
+        save = {it.toList()}, // almacenamos el valor convirtiendolo en un formato compatible, en este caso a una lista normal
+        restore = {it.toMutableStateList()} // lo convertimos a lista mutable en caso de un error
+    )
+    val itemList = rememberSaveable( saver = listSaver) { mutableStateListOf("v1","v2","v3","v4") }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Button(
+            onClick = { itemList.add("v${itemList.size + 1}")}
+        ){
+            Text("Agregar nuevo")
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        LazyColumn {
+
+            items(itemList) { item ->
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(4.dp),
+                    elevation = CardDefaults.cardElevation(4.dp) // sombra de la tarjeta
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(item, style = MaterialTheme.typography.bodyLarge)
+
+                        // boton de eliminacion de elemento
+                        IconButton(
+                            onClick = { itemList.remove(item) }
+                        ) {
+                            Icon(Icons.Default.Delete, contentDescription = "Eliminar")
+                        }
+                    }
+                }
+            }
+        }
     }
 }
