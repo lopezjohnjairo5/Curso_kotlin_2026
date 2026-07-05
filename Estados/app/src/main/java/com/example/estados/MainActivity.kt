@@ -1,6 +1,7 @@
 package com.example.estados
 
 import android.os.Bundle
+import android.widget.Space
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -43,7 +44,9 @@ import com.example.estados.ui.theme.EstadosTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Icon
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.mapSaver
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.toMutableStateList
 
@@ -84,7 +87,9 @@ class MainActivity : ComponentActivity() {
                 //EstadoDerivado() // ejemplo de un estado dependiente o derivado de otro
                 //EstadoDerivado2() //ejemplo 2, muestra el cambio de color segun la cantidad de caracteres introducida
                 //MiListaMutable() // ejercicio con lista mutable y manejo de estados
-                MiListaMutablePersistente() // ejercicio con lista mutable PERSISTENTE, es decir almacena los valores incluso al rotar la pantalla
+                //MiListaMutablePersistente() // ejercicio con lista mutable PERSISTENTE, es decir almacena los valores incluso al rotar la pantalla
+                //MiMapaDeUsuariosMutable() // ejercicio con los valores de un mapa de datos mutable
+                MiMapaDeUsuariosMutablePersistente() // ejercicio con los valores de un mapa de datos mutable y persistencia
             }
         }
     }
@@ -509,6 +514,228 @@ fun MiListaMutablePersistente() {
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+
+@Composable
+fun MiMapaDeUsuariosMutable(){
+
+    /*
+    * Esta funcion es un ejemplo de como se trabaja con Mapas mutables, (equivalentes a diccionarios en python),
+    * en Kotlin existen tanto los mapas normales y los mapas mutables(mutableStateMapOf), la diferencia está en que los mapas
+    * normales son de solo lectura, NO SON EDITABLES, es decir no se puede agregar, editar, eliminar elementos de
+    * los mapas normales (mapOf), para este ejemplo el mutableStateMapOf no es persistente, por lo cual
+    * al cambiar la orientacion de pantalla (rotacion: vertical, horizontal o Landscape, portrait) se reiniciará el mapa
+    * o dicho de otra forma se reseteará el mapa
+    * */
+    val users = remember {
+        mutableStateMapOf(
+            1 to "John",
+            2 to "Maria",
+            3 to "Roberta"
+        )
+    }
+
+    //Opcional: variables para tener nombres al azar para ponerlos al dar clic al btn de agregar
+    val nombres = listOf("Armando","Ariel","Beatriz","Camilo","Doris","Edwin","Fabio","Godinez","Hector","Isabel","Julian","Kimberly","Lorena","Manuel","Nancy","Orlando","Patricia","Rosa","Sandra","Tatiana","Valentina","William","Ximena","Zamara")
+
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Button(
+            onClick = {
+                val newId = (users.keys.maxOrNull() ?: 0) + 1
+                var nombreAl = nombres.random() // selecciona un nombre al azar del listado anterior
+                users[newId] = nombreAl
+            }
+        ) {
+            Text(text="Agregar nuevo usuario")
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // convertir mapa en lista para visualizarlo
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(400.dp) // Limita el alto a 300dp
+        ){
+            // con Items recorremos todoo el contenido de users
+            items(users.toList()){ (id, name) ->
+                // llamamos al componente que crea la tarjeta y le pasamos los datos de los usuarios y la funcion callback para eliminar al pulsar el btn del icono delete.
+                UserItem(id=id, name=name, onDelete = {users.remove(id)})
+            }
+        }
+    }
+}
+
+@Composable
+fun UserItem(id:Int,name:String,onDelete:()->Unit){
+    /**
+     * Funcion encargada de crear una tarjeta
+     * con los valores pasados por parametro
+     * */
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp) // para poner sombra a la tarjeta
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // mostramos los datos del usuario en una columna y al lado ponemos el btn de eliminar
+            Column{
+                Text(text = "Id: $id", style = MaterialTheme.typography.bodyLarge)
+                Text(text = name, style = MaterialTheme.typography.bodyMedium)
+            }
+
+            // ponemos un icono de eliminar a cada tarjeta
+            IconButton(
+                onClick = onDelete
+            ) {
+                Icon(Icons.Default.Delete, contentDescription = "Eliminar")
+            }
+        }
+    }
+}
+
+// ejemplo de MAPA con persitencia
+
+@Composable
+fun MiMapaDeUsuariosMutablePersistente(){
+
+    /*
+    * Esta funcion es un ejemplo de como se trabaja con Mapas mutables, (equivalentes a diccionarios en python),
+    * en Kotlin existen tanto los mapas normales y los mapas mutables(mutableStateMapOf), la diferencia está en que los mapas
+    * normales son de solo lectura, NO SON EDITABLES, es decir no se puede agregar, editar, eliminar elementos de
+    * los mapas normales (mapOf), para este ejemplo se usan rememberSaveable y mapSaver, los cuales permiten que
+    * el estado sea persistente, es decir no se reinician los valores al rotar la pantalla
+    * */
+    val users = rememberSaveable(
+        saver = mapSaver(
+            // 1. Convertimos las llaves Int a String para cumplir con los requisitos de mapSaver
+            save = { map -> map.mapKeys { it.key.toString() } },
+            // restore: sirve para reconstruir y recuperar el estado de los datos cuando la pantalla se destruya (por ejemplo, al rotar el dispositivo).
+            restore = { restoredMap ->
+                mutableStateMapOf<Int, String>().apply {
+                    // 2. Convertimos las llaves String de vuelta a Int al restaurar
+                    restoredMap.forEach { (key, value) ->
+                        if (value is String) {
+                            put(key.toInt(), value)
+                        }
+                    }
+                }
+            }
+        )
+    ) {
+        mutableStateMapOf(
+            1 to "John",
+            2 to "Maria",
+            3 to "Roberta"
+        )
+    }
+
+    /*
+    * ¿Cuándo se ejecuta el bloque save?
+    * - Se ejecuta únicamente cuando el sistema operativo está a punto de destruir la pantalla o
+    *   pausar la actividad, y necesita congelar el estado para no perderlo.
+    *   Esto ocurre en tres situaciones:
+    *       - Cambios de configuración:
+    *           El caso más común, como cuando el usuario rota la pantalla o cambia el idioma del sistema.
+    *       - Destrucción por falta de memoria:
+    *           Si dejas la aplicación en segundo plano para abrir un juego pesado, Android
+    *           puede cerrar tu app para liberar memoria RAM. save se asegura de empaquetar
+    *           tus datos antes de que eso pase.
+    *       - Cambio de pestañas/Navegación:
+    *           Si utilizas librerías de navegación de Compose y sales de la pantalla actual hacia
+    *           otra, el sistema guarda el estado para cuando decidas regresar.
+    *   Si estás usando la aplicación normalmente (agregando o eliminando usuarios
+    *   sin rotar la pantalla), el código dentro de save se ignora por completo para
+    *   ahorrar batería y procesamiento.
+    *
+    * ¿Cuándo se ejecuta el bloque restore?
+    * - Se ejecuta exclusivamente una sola vez, justo cuando la pantalla se vuelve a crear
+    *   desde cero después de haber sido destruida por alguno de los motivos anteriores.
+    *   Si el sistema encuentra datos guardados por save, ejecuta restore para reconstruir tu mapa.
+    *   Si es la primera vez que el usuario abre la aplicación (no hay nada guardado),
+    *   restore no se ejecuta, y en su lugar se lee el bloque de código inicial con los
+    *   tres usuarios por defecto (John, Maria, Roberta).
+    *
+    * Utilidad de restore:
+    * 1. El ciclo completo de supervivencia de los datosPaso A (Rotación de pantalla):
+    * - Android destruye la vista. mapSaver ejecuta el bloque save y convierte tu estado en
+    *   un mapa compatible con el sistema (Map<String, Any>).
+    * - Paso B (Recreación de pantalla):
+    *   Android vuelve a levantar la vista desde cero.
+    * - Paso C (Tu código vuelve a vivir): mapSaver ejecuta el bloque restore,
+    *   toma el mapa guardado en el paso A y te lo entrega para que recrees tu objeto original.
+    *
+    * 2. Conversión y tipado de datos
+    * - Android almacena los datos de forma genérica como tipos primitivos o básicos (String, Int, Boolean).
+    *   El bloque restore te da el espacio para castear o convertir esos datos de vuelta a las clases
+    *   específicas de tu aplicación (como tu mutableStateMapOf<Int, String>).
+    *
+    * 3. Evitar reiniciar los valores iniciales
+    * - Si no existiera el bloque restore, cuando la pantalla se vuelva a dibujar, Jetpack Compose
+    *   ignoraría lo que el usuario modificó y volvería a ejecutar el bloque por defecto de abajo:
+    *   mutableStateMapOf(
+            1 to "John",
+            2 to "Maria",
+            3 to "Roberta"
+        )
+    * En resumen:
+    *   - Sin 'restore', siempre volverías a tener solo los 3 usuarios originales
+    *   - saver es un mecanismo de emergencia y recreación. Mientras la pantalla esté visible y
+    *     estable, permanece totalmente inactivo.
+    * */
+
+    //Opcional: variables para tener nombres al azar para ponerlos al dar clic al btn de agregar
+    val nombres = listOf("Armando","Ariel","Beatriz","Camilo","Doris","Edwin","Fabio","Godinez","Hector","Isabel","Julian","Kimberly","Lorena","Manuel","Nancy","Orlando","Patricia","Rosa","Sandra","Tatiana","Valentina","William","Ximena","Zamara")
+
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Button(
+            onClick = {
+                val newId = (users.keys.maxOrNull() ?: 0) + 1
+                var nombreAl = nombres.random() // selecciona un nombre al azar del listado anterior
+                users[newId] = nombreAl
+            }
+        ) {
+            Text(text="Agregar nuevo usuario")
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // convertir mapa en lista para visualizarlo
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(400.dp) // Limita el alto a 300dp
+        ){
+            // con Items recorremos todoo el contenido de users
+            items(users.toList()){ (id, name) ->
+                // llamamos al componente que crea la tarjeta y le pasamos los datos de los usuarios y la funcion callback para eliminar al pulsar el btn del icono delete.
+                UserItem(id=id, name=name, onDelete = {users.remove(id)})
             }
         }
     }
