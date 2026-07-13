@@ -1,6 +1,7 @@
 package com.example.estados
 
 import android.os.Bundle
+import android.widget.Button
 import android.widget.Space
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -9,12 +10,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -31,7 +34,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
@@ -44,11 +46,14 @@ import com.example.estados.ui.theme.EstadosTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Icon
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.mapSaver
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.toMutableStateList
+import androidx.compose.ui.Alignment
+import java.util.UUID
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -89,7 +94,9 @@ class MainActivity : ComponentActivity() {
                 //MiListaMutable() // ejercicio con lista mutable y manejo de estados
                 //MiListaMutablePersistente() // ejercicio con lista mutable PERSISTENTE, es decir almacena los valores incluso al rotar la pantalla
                 //MiMapaDeUsuariosMutable() // ejercicio con los valores de un mapa de datos mutable
-                MiMapaDeUsuariosMutablePersistente() // ejercicio con los valores de un mapa de datos mutable y persistencia
+                //MiMapaDeUsuariosMutablePersistente() // ejercicio con los valores de un mapa de datos mutable y persistencia
+                //CounterCicloDeVida() // ejemplo de contador con mensaje por consola al inicializar un componente o mostrarlo por primera vez en pantalla
+                ListadoDeTareas()
             }
         }
     }
@@ -736,6 +743,166 @@ fun MiMapaDeUsuariosMutablePersistente(){
             items(users.toList()){ (id, name) ->
                 // llamamos al componente que crea la tarjeta y le pasamos los datos de los usuarios y la funcion callback para eliminar al pulsar el btn del icono delete.
                 UserItem(id=id, name=name, onDelete = {users.remove(id)})
+            }
+        }
+    }
+}
+
+
+@Composable
+fun CounterCicloDeVida(){
+    /**
+     * LaunchedEffect recibe una clave, si dicha clave es Unit solo se ejecutará una vez
+     * si dicha clave es otra y esta cambia durante la ejecucion del programa
+     * se reiniciará LaunchedEffect con el nuevo valor de la clave
+     * LaunchedEffect es util con una clave nueva cuando:
+     * - se quiere cargar datos de una API
+     * - reiniciar un temporizador
+     * - detectar cambios en permisos y configuraciones del sistema
+     * - reiniciar animaciones al cambio de una propiedad o valor
+     */
+    var count by remember { mutableIntStateOf(0) }
+
+    //LaunchedEffect se ejecuta por primera y unica vez cuando se muestra este componente en pantalla
+    LaunchedEffect(Unit) { // el argumento Unit indica que solo se ejecutará una vez
+        println("Este mensaje se muestra por primera y unica vez")
+    }
+    println( "La pantalla se está recomponiendo" )
+    Column(
+        modifier = Modifier
+            .fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = "Contador: $count",
+            fontSize = 24.sp
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(
+            onClick = { count++ }
+        ) {
+            Text(
+                text = "Click para incrementar"
+            )
+        }
+    }
+}
+
+// Ejemplo de claves para recomposicion
+data class Tarea (val id: String, val descripcion: String)
+
+fun ListaInicialDeTareas() : List<Tarea> {
+    //UUID.randomUUID() crea un id unico para cada elemento
+    /**
+     * return listOf(
+     *         Tarea(id = UUID.randomUUID().toString(), descripcion = "Estudiar Kotlin Jet Pack C"),
+     *         Tarea(id = UUID.randomUUID().toString(), descripcion = "Estudiar Php"),
+     *         Tarea(id = UUID.randomUUID().toString(), descripcion = "Estudiar Js"),
+     *         Tarea(id = UUID.randomUUID().toString(), descripcion = "Estudiar Css3")
+     *     )
+     */
+
+    return mutableListOf(
+        Tarea(id = UUID.randomUUID().toString(), descripcion = "Estudiar Kotlin Jet Pack C"),
+        Tarea(id = UUID.randomUUID().toString(), descripcion = "Estudiar Php"),
+        Tarea(id = UUID.randomUUID().toString(), descripcion = "Estudiar Js"),
+        Tarea(id = UUID.randomUUID().toString(), descripcion = "Estudiar Css3")
+    )
+
+}
+
+@Composable
+fun ListadoDeTareas(){
+
+    // convertimos la lista de tareas de inmutable a mutable gracias a mutableStateOf, así podemos agregar, editar, eliminar elementos de la lista
+    var tareas by remember { mutableStateOf(ListaInicialDeTareas())}
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Button(
+            onClick = {
+                tareas = tareas + Tarea(
+                    id = UUID.randomUUID().toString(),
+                    descripcion = "Nueva tarea"
+                )
+            },
+            modifier = Modifier.height(48.dp)
+        ){
+            Text(
+                text = "Agregar tarea"
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+        LazyColumn(
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items( tareas, key = {it.id} ){ tarea ->
+                TareaItem(
+                    tarea = tarea,
+                    onEliminar = {tareaEliminar ->
+                        tareas.filter{it.id != tareaEliminar.id}
+                    }
+                )
+            }
+        }
+    }
+}
+
+
+
+@Composable
+fun TareaItem(tarea: Tarea, onEliminar:(Tarea)->Unit){
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(4.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        ),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(120.dp)
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxHeight(),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = tarea.id,
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.weight(1f)
+                )
+                Text(
+                    text = tarea.descripcion,
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            IconButton(
+                onClick = {onEliminar(tarea)}
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Eliminar tarea"
+                )
             }
         }
     }

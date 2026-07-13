@@ -17,6 +17,8 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableIntStateOf
 import com.example.documentacionkotlin.ui.theme.DocumentacionKotlinTheme
 
 class MainActivity : ComponentActivity() {
@@ -303,7 +305,6 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-
 
 
 
