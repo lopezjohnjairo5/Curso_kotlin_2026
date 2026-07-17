@@ -4,6 +4,7 @@ import android.R
 import android.os.Bundle
 import android.util.Log
 import android.widget.Space
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -19,24 +20,34 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.ProduceStateScope
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.efectossecundarios.ui.theme.EfectosSecundariosTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -116,7 +127,13 @@ class MainActivity : ComponentActivity() {
                 //SideEffectEjemplo() //  sideEffect se ejecuta despues de cada recomposición y se ejecuta en el hilo principal no en segundo plano
 
                 //CorrutinaSuspendidaConTareaLenta() //ejemplo de uso de funcion suspendida dentro de una corrutina
-                DisposableEffectEjemplo() // DisposableEffect sirve para ejecutar un efecto secundario que será limpiado o eliminado al quitar el Composable, por ejemplo al cerrar la aplicacion se ejecutará el onDispose
+                //DisposableEffectEjemplo() // DisposableEffect sirve para ejecutar un efecto secundario que será limpiado o eliminado al quitar el Composable, por ejemplo al cerrar la aplicacion se ejecutará el onDispose
+                //ContenedorPadre() // ejemplo de rememberUpdatedState
+
+                //ProduceStateEjemplo() // ejemplo deProduce State
+                //FrasesRandom()  // nuevo ejemplo deProduce State
+
+                sanpshotFlowEjemplo() // ejemplo de sanpshotFlow
             }
         }
     }
@@ -400,4 +417,246 @@ fun DisposableEffectEjemplo(){
             modifier = Modifier.padding(16.dp)
         )
     }
+}
+
+
+// ejemplo de rememberUpdatedState
+// =========================================================================
+// EJEMPLO CORREGIDO: PROPÓSITO REAL DE rememberUpdatedState
+// =========================================================================
+/*
+ * ¿Qué es rememberUpdatedState y para qué sirve?
+ * Es una función de Jetpack Compose que permite a un efecto secundario (como LaunchedEffect)
+ * acceder al valor MÁS RECIENTE de un parámetro que cambia desde el exterior,
+ * SIN necesidad de reiniciar o cancelar dicho efecto secundario (manteniendo la clave como Unit).
+ *
+ * ¿Cuándo es obligatorio?
+ * Cuando el valor que necesitas dentro del efecto secundario NO es un MutableState local,
+ * sino un parámetro común (String, Int, una función lambda/callback, etc.) que viene de un componente Padre.
+ */
+
+@Composable
+fun ContenedorPadre() {
+    // 1. El Padre maneja el estado mutable local que provocará recomposiciones.
+    var mensajeParaElHijo by remember { mutableStateOf("Hola desde compose") }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Button(
+            onClick = {
+                // 2. Al hacer clic, modificamos el String. El Padre se recompone
+                // y le envía el nuevo String plano al componente Hijo.
+                mensajeParaElHijo = "Nuevo mensaje"
+            },
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Text(text = "Cambiar mensaje por default.")
+        }
+
+        // 3. Invocamos al Hijo pasándole un String plano (NO un MutableState)
+        ComponenteHijoConTimer(mensajeExterno = mensajeParaElHijo)
+    }
+}
+
+@Composable
+fun ComponenteHijoConTimer(mensajeExterno: String) { // <- Recibe un String plano ordinario
+    val context = LocalContext.current
+
+    // 4. AQUÍ ESTÁ LA CLAVE RECORREGIDA:
+    // 'rememberUpdatedState' toma el String plano 'mensajeExterno'. Cada vez que el Padre
+    // recompone al Hijo con un texto nuevo, esta referencia se actualiza internamente en tiempo real,
+    // PERO no altera las llaves del LaunchedEffect.
+    val currentMessage by rememberUpdatedState(newValue = mensajeExterno)
+
+    // 5. El efecto se ejecuta UNA Sola vez al crearse el Hijo porque su clave es 'Unit'.
+    LaunchedEffect(Unit) {
+        // 6. El código espera de forma asíncrona durante 5 segundos.
+        delay(5000)
+
+        // 7. PRUEBA A (CORRECTA): Usamos 'currentMessage'.
+        // Si el usuario presionó el botón a los 2 segundos, el Padre recompuso al Hijo.
+        // Gracias a rememberUpdatedState, aquí se leerá el valor fresco: "Nuevo mensaje".
+        Toast.makeText(context, currentMessage, Toast.LENGTH_LONG).show()
+
+        // 8. PRUEBA B (INCORRECTA - Comentada para comprobar el error):
+        // Si descomentas la línea de abajo y comentas la de arriba, verás que el LaunchedEffect
+        // quedó "congelado" con el primer String que recibió al nacer ("Hola desde compose").
+        // Aunque presiones el botón, el Toast SIEMPRE mostrará el texto viejo porque capturó una variable estática.
+        // Toast.makeText(context, mensajeExterno, Toast.LENGTH_LONG).show()
+    }
+}
+
+
+/* Ejemplos de produceState
+*
+* es una función de Jetpack Compose en Kotlin que se utiliza
+* para convertir un flujo de datos externo (como una Corrutina,
+* un Flow, un LiveData o una petición de red) en un Estado de
+* Compose (State<T>) que la interfaz de usuario pueda observar
+* y reaccionar automáticamente.
+*
+* Es, en esencia, un sustituto limpio que
+* combina remember y LaunchedEffect en un
+* solo bloque de código.
+*
+*
+* ¿Cómo funciona?Cuando produceState entra en la composición,
+* lanza una corrutina en segundo plano. Dentro de ese bloque,
+* puedes realizar operaciones asíncronas y usar la función value
+* para actualizar el estado. Cuando la actualizas, Compose redibuja
+* automáticamente los elementos visuales que dependan de ese estado.
+* Si produceState sale de la pantalla, la corrutina se cancela
+* automáticamente de forma segura.
+*
+* Ventajas de usarloCódigo más limpio: No necesitas escribir un remember
+* { mutableStateOf(...) } seguido de un LaunchedEffect. Todoo queda unificado.
+* Seguridad de ciclo de vida: Se cancela por sí solo si el usuario sale de la pantalla,
+* evitando fugas de memoria.Reactivo a cambios (Keys): Puedes pasarle llaves (key1, key2).
+* Si el valor de esa llave cambia (por ejemplo, cambias de usuario), la corrutina anterior
+* se destruye y arranca una nueva automáticamente.Cláusula de limpieza: Te permite usar la
+* función awaitDispose { ... } al final del bloque para cerrar conexiones de WebSockets o
+* listeners de bases de datos cuando el componente se destruya.
+* */
+
+
+@Composable
+fun ProduceStateEjemplo (){
+
+    val datos = produceState(initialValue = "Cargando...") {
+        delay(5000)
+        value = "Datos cargados correctamente"
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = datos.value
+        )
+
+    }
+}
+
+
+@Composable
+fun FrasesRandom(){
+    val frase by produceState<String?>(initialValue = null) {
+        delay(4000)
+        value = listOf(
+            "El conocimiento es poder",
+            "nunca pares de aprender",
+            "El futuro es ahora",
+            "la practica hace al maestro"
+        ).random()
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        if (frase == null){
+            CircularProgressIndicator()
+        }else{
+            Text(
+                text = frase!!,
+                style = MaterialTheme.typography.headlineSmall,
+                textAlign = TextAlign.Center,
+                fontSize = 20.sp,
+                modifier = Modifier.padding(16.dp)
+            )
+        }
+    }
+}
+
+
+// Ejemplo de sanpshotFlow
+
+@Composable
+fun sanpshotFlowEjemplo(){
+    /*
+    * snapshotFlow
+    *
+    * función de Jetpack Compose que convierte el sistema de estado de la interfaz en un Flow.
+    * Observa los estados leídos en su interior y emite nuevos valores cada vez que estos cambian.
+    *
+    * Es una secuencia de datos (foto del estado) emitida de forma asincrona
+    * emite un nuevo valor solo cuando el objeto que se observa
+    * cambia, es ahí cuando se saca una "foto" del nuevo estado.
+    *
+    * Se usa normalmente dentro de LaunchedEffect o rememberCoroutineScope
+    *
+    * Aclaracion:
+    *
+    * para entender snapshot pensemos en una foto exacta de todos los valores
+    * observables en el momento, si dichos valores cambian se saca una foto del estado
+    * y ahí se mira si se debe o no recompones el Composable, solo si cambian los
+    * valores o el valor observado, se recompone (o redibuja el elemento en pantalla)
+    *
+    * En este ejemplo se saca una captura o foto del estado cada vez que cambia el valor
+    * del OutlinedText (campo de texto), y cada vez que se saca dicha foto verificamos si el valor
+    * de una variable (showAlert) cambió, si es true mostramos un texto.
+    *
+    * ¿Para qué sirve?Se utiliza principalmente para ejecutar efectos secundarios cuando el estado
+    * de la UI cambia. Al convertir el estado en un Flow, puedes aprovechar toda la potencia de los
+    * operadores estándar como filter, map o debounce (para evitar llamadas repetidas muy seguidas).
+    *
+    * Un caso de uso común es el análisis de datos (analytics), por ejemplo, enviar un registro
+    * cuando un usuario se desplaza más allá del primer elemento en una lista.
+    *
+    * */
+
+    val textState = remember {mutableStateOf("")}
+    val showAlert = remember {mutableStateOf(false)}
+
+    // creando un efecto secundario
+    LaunchedEffect(Unit){
+        snapshotFlow {
+            textState.value
+        }.collect { text ->
+            // si el usuario escribio Android o android (no importa si lo escribio en mayusculas), entonces showAlert pasa a ser true
+            showAlert.value = text.contains("Android", ignoreCase = true) // retorna true o false segun lo que escriba el usuario
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // campo de ingreso de texto
+        OutlinedTextField(
+            value = textState.value,
+            onValueChange = { textState.value = it },
+            label = { Text( text = "Escribe algo...") },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        // si la variable showAlert tiene true, mostramos un texto
+        if (showAlert.value){
+            Spacer(Modifier.height(16.dp))
+            Text(
+                text = "Escribiste Android",
+                color = MaterialTheme.colorScheme.primary,
+                style = MaterialTheme.typography.bodyMedium
+            )
+
+        }
+    }
+
+
+
 }
