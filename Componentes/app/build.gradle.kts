@@ -13,7 +13,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.componentes"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 37
         versionCode = 1
         versionName = "1"
@@ -55,4 +55,5 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
 
     implementation(libs.material.icons.extended)
+    implementation("androidx.compose.material:material-icons-extended")
 }
