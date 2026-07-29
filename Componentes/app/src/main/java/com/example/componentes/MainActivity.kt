@@ -32,6 +32,7 @@ import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Contacts
 import androidx.compose.material.icons.filled.Delete
@@ -49,6 +50,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DropdownMenu
@@ -57,6 +59,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.ModalBottomSheet
@@ -64,6 +67,9 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
+import androidx.compose.material3.RangeSlider
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -76,16 +82,20 @@ import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.simulateHotReload
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
@@ -94,6 +104,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.example.componentes.ui.theme.ComponentesTheme
+import kotlinx.coroutines.delay
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -128,6 +139,20 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+
+
+}
+
+
+suspend fun simulateSlowProcess(
+    onStart: () -> Unit,
+    onFinish: () -> Unit
+){
+    // simulacion de un componente que dura 3 segundos
+    onStart()
+    delay(3000)
+    onFinish()
 }
 
 @Composable
@@ -180,6 +205,16 @@ fun MisComponentes() {
         item { DatePickerDialogExample() }
         item { TimePickerExample() }
         item { TimePickerDialogExample() }
+
+        // indicadores de carga
+        item { CircularProgressIndeterminadoEjemplo() }
+        item { CircularProgressDeterminadoEjemplo() }
+        item { LinearProgressIndicatorIndeterminadoEjemplo() }
+        item { LinearProgressIndicatorDeterminadoEjemplo() }
+
+        // sliders
+        item{ SliderEjemplo() }
+        item { RangeSliderEjemplo() }
     }
 }
 
@@ -1499,4 +1534,494 @@ fun TimePickerDialogExample() {
             }
         }
     }
+}
+
+
+// ejemplos de componentes de carga
+
+/**
+ * COMPONENTE PRINCIPAL: CircularProgressIndicator (Versión Indeterminada)
+ *
+ * ¿Qué es?: Un indicador de progreso circular y animado de Material Design.
+ * ¿Para qué sirve?: Notifica al usuario que hay una operación en curso cuya duración es desconocida.
+ * Parámetros clave usados: 'modifier' para el tamaño, 'strokeWidth' para el grosor y 'color' para el diseño.
+ */
+@Composable
+fun CircularProgressIndeterminadoEjemplo() {
+
+    // ESTADOS DE LA INTERFAZ
+    // Controla si el indicador de carga circular debe mostrarse en pantalla.
+    var isLoading by remember { mutableStateOf(false) }
+
+    // Dispara el efecto secundario (LaunchedEffect) para iniciar la simulación cuando pasa a 'true'.
+    var startOperation by remember { mutableStateOf(false) }
+
+    // GESTIÓN DE EFECTOS SECUNDARIOS
+    // Escucha cambios en 'startOperation'. Si cambia a true, ejecuta la corrutina.
+    LaunchedEffect(startOperation) {
+        if (startOperation) {
+            // Llama a una función suspendida que simula una tarea pesada en segundo plano.
+            simulateSlowProcess(
+                onStart = {
+                    isLoading = true // Activa la animación de carga antes de empezar.
+                },
+                onFinish = {
+                    isLoading = false       // Apaga la animación al terminar.
+                    startOperation = false   // Reinicia el disparador para permitir un nuevo clic.
+                }
+            )
+        }
+    }
+
+    // DISEÑO DE LA INTERFAZ DE USUARIO (UI)
+    // Contenedor vertical que centra todos sus elementos en la pantalla.
+    Column(
+        modifier = Modifier
+            .fillMaxSize()       // Ocupa todo el ancho y alto disponible de la pantalla.
+            .padding(24.dp),     // Añade un margen interno de seguridad.
+        verticalArrangement = Arrangement.Center,       // Centra el contenido verticalmente.
+        horizontalAlignment = Alignment.CenterHorizontally // Centra el contenido horizontalmente.
+    ) {
+        // Título del ejemplo
+        Text(
+            text = "Circular progress indeterminado",
+            style = MaterialTheme.typography.bodyLarge
+        )
+
+        // Espaciador vertical estático
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // FLUJO CONDICIONAL SEGÚN EL ESTADO DE LA APLICACIÓN
+        if (isLoading) {
+            // ESTADO 1: CARGANDO - Se muestra el componente solicitado
+            CircularProgressIndicator(
+                modifier = Modifier.size(64.dp), // Define un tamaño de 64x64 dp para el círculo.
+                strokeWidth = 6.dp,              // Define un borde grueso y visible de 6 dp.
+                color = MaterialTheme.colorScheme.primary // Aplica el color principal del tema.
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = "Procesando operación",
+                style = MaterialTheme.typography.bodyLarge
+            )
+        } else {
+            // ESTADO 2: OPERACIÓN COMPLETADA (O ESTADO INICIAL)
+            // Muestra un ícono de confirmación verde/azul (color primario)
+            Icon(
+                imageVector = Icons.Filled.CheckCircle,
+                contentDescription = "Operación completada",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(64.dp)
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = "Operación completada",
+                style = MaterialTheme.typography.bodyLarge
+            )
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // DISPARADOR DE ACCIÓN
+        // Botón que cambia el estado para iniciar todo el ciclo de carga.
+        Button(
+            onClick = { startOperation = true } // Cambia el estado a true al hacer clic.
+        ) {
+            Text(text = "Iniciar operación")
+        }
+    }
+}
+
+/**
+ * COMPONENTE PRINCIPAL: CircularProgressIndicator (Versión Determinada)
+ *
+ * ¿Qué es?: Un indicador de progreso circular controlado por un valor numérico.
+ * ¿Para qué sirve?: Muestra de manera visual y exacta el avance de una tarea (0% a 100%).
+ *
+ * PARÁMETROS ADICIONALES DEL COMPONENTE (No presentes en este ejemplo):
+ * - trackColor: Color del carril/fondo del círculo sobre el cual se mueve el progreso.
+ * - strokeCap: Estilo de los extremos de la línea. Se puede usar 'StrokeCap.Round' para bordes redondeados.
+ */
+@Composable
+fun CircularProgressDeterminadoEjemplo() {
+
+    // VALORES DE ESTADO
+    // Guarda el progreso actual en un rango de 0.0f a 1.0f (inicializa en 0%)
+    var progress by remember { mutableStateOf(0f) }
+
+    // Disparador de estado para iniciar el bloque asíncrono de descarga
+    var startDownload by remember { mutableStateOf(false) }
+
+    // GESTIÓN DE CORRUTINAS (Efecto Secundario)
+    // Se ejecuta de forma segura en segundo plano cuando 'startDownload' cambia a true
+    LaunchedEffect(startDownload) {
+        if (startDownload) {
+            // Repite el bloque interno exactamente 20 veces para segmentar la carga
+            repeat(20) {
+                delay(150) // Pausa la corrutina por 150 milisegundos simulando latencia de red
+                progress += 0.05f // Incrementa el progreso en un 5% (0.05) en cada iteración
+            }
+            /* Cálculo de tiempo total: 20 iteraciones * 150ms = 3000ms (3 segundos) */
+
+            progress = 1f // Forzamos el valor a 1.0f (100%) al finalizar para mitigar errores de precisión decimal
+            startDownload = false // Apaga el disparador para indicar que el proceso terminó
+        }
+    }
+
+    // DISEÑO DE LA INTERFAZ DE USUARIO (UI)
+    Column(
+        modifier = Modifier
+            .fillMaxSize()       // Ocupa la pantalla completa
+            .padding(24.dp),     // Margen de separación con los bordes de la pantalla
+        verticalArrangement = Arrangement.Center,       // Alineación vertical al centro
+        horizontalAlignment = Alignment.CenterHorizontally // Alineación horizontal al centro
+    ) {
+        // Texto informativo de la acción actual
+        Text(
+            text = "Circular progress determinado - simulación de descarga de archivo",
+            style = MaterialTheme.typography.bodyLarge
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // INDICADOR DE PROGRESO DETERMINADO
+        CircularProgressIndicator(
+            progress = { progress }, // Entrega el estado flotante actual a través de una expresión lambda
+            modifier = Modifier.size(80.dp), // Ajusta las dimensiones del círculo a 80x80 dp
+            strokeWidth = 10.dp, // Asigna un grosor robusto de 10 dp a la línea
+
+            // EVALUACIÓN DINÁMICA DE COLOR
+            // Si el progreso es menor al 100% usa el color Primary, si ya terminó cambia a Secondary
+            color = if (progress < 1f)
+                MaterialTheme.colorScheme.primary
+            else
+                MaterialTheme.colorScheme.secondary
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // TEXTO PORCENTUAL
+        // Multiplica el valor flotante por 100 y lo convierte a un entero para mostrar "X%"
+        Text(
+            text = "${(progress * 100).toInt()}%",
+            style = MaterialTheme.typography.bodyLarge
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // BOTÓN ACCIONADOR DE LA DESCARGA
+        Button(
+            onClick = { startDownload = true },
+            // Se bloquea el botón si la descarga ya terminó (100%) o si actualmente está descargando
+            enabled = progress < 1f && !startDownload
+        ) {
+            // El texto del botón cambia según el avance de la simulación
+            Text(
+                if (progress < 1f) "Iniciar descarga" else "Descarga completa"
+            )
+        }
+
+        // CONTROL DE REINICIO
+        // Este bloque condicional dibuja un botón extra únicamente cuando la descarga alcanzó el 100%
+        if (progress >= 1f) {
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(
+                onClick = {
+                    progress = 0f          // Restablece el porcentaje a 0%
+                    startDownload = false  // Asegura que el hilo secundario esté apagado
+                }
+            ) {
+                Text("Reiniciar")
+            }
+        }
+    }
+}
+/**
+ * COMPONENTE PRINCIPAL: LinearProgressIndicator (Versión Indeterminada)
+ *
+ * ¿Qué es?: Una barra de progreso horizontal con una animación cíclica continua.
+ * ¿Para qué sirve?: Indica al usuario que se está procesando una tarea en segundo plano
+ *                  sin especificar una estimación exacta de tiempo o porcentaje.
+ *
+ * PARÁMETROS ADICIONALES EXPLICADOS:
+ * - trackColor: Define el color de la barra base (fondo) para que la animación resalte.
+ * - strokeCap: Modifica las esquinas de la barra; 'StrokeCap.Round' le da un aspecto moderno y suave.
+ */
+@Composable
+fun LinearProgressIndicatorIndeterminadoEjemplo() {
+
+    // GESTIÓN DE ESTADOS DE LA INTERFAZ
+    // Controla si la barra de progreso y el texto de carga deben renderizarse en pantalla.
+    var isLoading by remember { mutableStateOf(false) }
+
+    // Registra si la operación se completó exitosamente para mostrar el mensaje de éxito.
+    var isCompleted by remember { mutableStateOf(false) }
+
+    // GESTIÓN DE EFECTOS SECUNDARIOS (Hilos de fondo)
+    // Se activa de forma segura inmediatamente cuando 'isLoading' cambia a 'true'
+    LaunchedEffect(isLoading) {
+        if (isLoading) {
+            delay(5000)        // Pausa la ejecución durante 5000 milisegundos (5 segundos) simulando la tarea
+            isLoading = false  // Apaga la barra de progreso horizontal
+            isCompleted = true // Activa la visualización del estado finalizado
+        }
+    }
+
+    // ARQUITECTURA DE LA INTERFAZ DE USUARIO (UI)
+    Column(
+        modifier = Modifier
+            .fillMaxSize()       // Extiende el contenedor a todo lo ancho y alto del dispositivo
+            .padding(24.dp),     // Aplica un margen interno perimetral
+        verticalArrangement = Arrangement.Center,       // Centra el contenido en el eje vertical
+        horizontalAlignment = Alignment.CenterHorizontally // Centra el contenido en el eje horizontal
+    ) {
+        // Título descriptivo de la pantalla
+        Text(
+            text = "Linear progress indicator - indeterminado",
+            style = MaterialTheme.typography.bodyLarge
+        )
+
+        // FLUJO CONDICIONAL SEGÚN EL ESTADO DE CARGA
+        if (isLoading) {
+            // CASO A: LA OPERACIÓN ESTÁ ACTIVA
+            Text(
+                text = "Procesando datos",
+                style = MaterialTheme.typography.bodyLarge
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // INDICADOR HORIZONTAL SOLICITADO
+            LinearProgressIndicator(
+                modifier = Modifier
+                    .fillMaxWidth() // Hace que la barra se expanda horizontalmente todo lo posible
+                    .height(8.dp),  // Define un grosor personalizado de 8 dp para que sea muy visible
+                color = MaterialTheme.colorScheme.primary, // Color de la animación móvil (Color Primario)
+                trackColor = MaterialTheme.colorScheme.surfaceVariant, // Color de la barra base de fondo
+                strokeCap = StrokeCap.Round // Redondea estéticamente los extremos de la barra
+            )
+
+        } else if (isCompleted) {
+            // CASO B: LA OPERACIÓN HA TERMINADO CON ÉXITO
+            Text(
+                text = "Operación finalizada",
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+
+        // BOTÓN DISPARADOR DE LA OPERACIÓN
+        Button(
+            onClick = {
+                isLoading = true      // Inicia el proceso y arranca la corrutina
+                isCompleted = false   // Oculta cualquier mensaje previo de éxito
+            },
+            // Deshabilita el botón mientras la carga está activa para evitar múltiples clicks accidentales
+            enabled = !isLoading
+        ) {
+            Text(text = "Iniciar operación")
+        }
+    }
+}
+/**
+ * COMPONENTE PRINCIPAL: LinearProgressIndicator (Versión Determinada)
+ *
+ * ¿Qué es?: Una barra de progreso horizontal cuyo llenado depende de un valor numérico continuo.
+ * ¿Para qué sirve?: Informa de forma exacta y lineal el porcentaje completado de una tarea activa (0% a 100%).
+ *
+ * PARÁMETROS ADICIONALES EXPLICADOS (No presentes en este ejemplo):
+ * - strokeCap: Permite redondear las esquinas de la barra usando 'StrokeCap.Round'.
+ * - gapSize: Controla el espacio de separación entre la barra rellena y el carril de fondo.
+ */
+@Composable
+fun LinearProgressIndicatorDeterminadoEjemplo() {
+
+    // CONTROL DE ESTADOS DE LA INTERFAZ
+    // Guarda el progreso numérico de la barra (Rango flotante de 0f a 1f)
+    var progress by remember { mutableStateOf(0f) }
+
+    // Bandera lógica para saber si la corrutina de descarga se está ejecutando actualmente
+    var isDownloading by remember { mutableStateOf(false) }
+
+    // Bandera lógica para verificar si el archivo ya se descargó por completo
+    var downloadCompleted by remember { mutableStateOf(false) }
+
+    // GESTIÓN DE EFECTOS SECUNDARIOS (Corrutinas de fondo)
+    // Escucha activamente el estado de 'isDownloading'. Si cambia a 'true', arranca el bloque.
+    LaunchedEffect(isDownloading) {
+        if (isDownloading) {
+            downloadCompleted = false // Resetea el estado de éxito al iniciar una nueva descarga
+
+            // Bucle que incrementa el progreso de forma controlada mientras no llegue al 100% (1f)
+            while (progress < 1f) {
+                delay(200)          // Pausa la ejecución por 200 milisegundos en cada iteración
+                progress += 0.05f    // Incrementa un 5% el valor de progreso
+            }
+
+            isDownloading = false     // Apaga la bandera de descarga activa al salir del bucle
+            downloadCompleted = true  // Activa el estado de descarga finalizada con éxito
+        }
+    }
+
+    // ARQUITECTURA Y DISEÑO DE LA PANTALLA (UI)
+    Column(
+        modifier = Modifier
+            .fillMaxSize()       // Extiende el contenedor por toda la pantalla disponible
+            .padding(24.dp),     // Margen de seguridad con los bordes del dispositivo
+        verticalArrangement = Arrangement.Center,       // Centra todos los elementos verticalmente
+        horizontalAlignment = Alignment.CenterHorizontally // Centra todos los elementos horizontalmente
+    ) {
+        // Título descriptivo del flujo de trabajo
+        Text(
+            text = "Linear progress determinado - simulación de descarga de archivo",
+            style = MaterialTheme.typography.bodyLarge
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // FLUJO CONDICIONAL: MUESTRA LA BARRA SOLO MIENTRAS SE DESCARGA
+        if (isDownloading) {
+            // INDICADOR HORIZONTAL DETERMINADO SOLICITADO
+            LinearProgressIndicator(
+                progress = { progress }, // Pasa el valor del estado flotante mediante una lambda
+                modifier = Modifier
+                    .fillMaxWidth()     // Estira la barra para ocupar todo el ancho del contenedor
+                    .height(8.dp),      // Le asigna un grosor físico visible de 8 dp
+                color = MaterialTheme.colorScheme.primary, // Color de la barra que avanza (Color Primario)
+                trackColor = MaterialTheme.colorScheme.surfaceVariant // Color de la barra base de fondo
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // VISUALIZADOR DE PORCENTAJE EN TEXTO
+            // Transforma el float (0.0 a 1.0) en entero (0 a 100) añadiendo el símbolo "%"
+            Text(
+                text = "${(progress * 100).toInt()}%",
+                style = MaterialTheme.typography.bodyLarge
+            )
+        }
+
+        // CONTROL ACCIONADOR
+        // Botón encargado de disparar la acción y reiniciar los valores
+        Button(
+            onClick = {
+                if (!isDownloading) {
+                    progress = 0f         // Reinicia el progreso a cero antes de comenzar
+                    isDownloading = true  // Dispara el LaunchedEffect
+                }
+            },
+            // Se deshabilita automáticamente mientras la descarga esté en curso
+            enabled = !isDownloading
+        ) {
+            Text(text = "Iniciar descarga")
+        }
+
+        // SECCIÓN INFORMATIVA DE ÉXITO FINAL
+        // Aparece dinámicamente en pantalla cuando la bandera 'downloadCompleted' es verdadera
+        if (downloadCompleted) {
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "Archivo descargado.",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.primary // Resalta el texto final con el color del tema
+            )
+        }
+    }
+}
+
+// ejemplos slider
+
+@Composable
+fun SliderEjemplo(){
+
+    var sliderValue by remember { mutableFloatStateOf(50f) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()       // Extiende el contenedor por toda la pantalla disponible
+            .padding(24.dp),     // Margen de seguridad con los bordes del dispositivo
+        verticalArrangement = Arrangement.Center,       // Centra todos los elementos verticalmente
+        horizontalAlignment = Alignment.CenterHorizontally // Centra todos los elementos horizontalmente
+    ) {
+        // Título descriptivo del flujo de trabajo
+        Text(
+            text = "Slider ejemplo\nVolumen actual: ${sliderValue.toInt()}",
+            style = MaterialTheme.typography.titleMedium
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Slider(
+            value = sliderValue,
+            onValueChange = { sliderValue = it },
+            valueRange = 0f..100f,
+            //steps = 3, // cantidad de divisiones internas de la barra slider
+            onValueChangeFinished = {
+                println( "El usuario soltó el slider en ${sliderValue}")
+            },
+            colors = SliderDefaults.colors(
+                activeTrackColor = MaterialTheme.colorScheme.primary,
+                inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+                thumbColor = MaterialTheme.colorScheme.primary
+            )
+        )
+    }
+
+}
+
+
+@Composable
+fun RangeSliderEjemplo(){
+    var priceRange by remember { mutableStateOf(50f..300f) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()       // Extiende el contenedor por toda la pantalla disponible
+            .padding(24.dp),     // Margen de seguridad con los bordes del dispositivo
+        verticalArrangement = Arrangement.Center,       // Centra todos los elementos verticalmente
+        horizontalAlignment = Alignment.CenterHorizontally // Centra todos los elementos horizontalmente
+    ) {
+        // Título descriptivo del flujo de trabajo
+        Text(
+            text = "RangeSlider ejemplo\nFiltro por precio}",
+            style = MaterialTheme.typography.titleMedium
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = "${priceRange.start.toInt()} USD - ${priceRange.endInclusive.toInt()} USD",
+            style = MaterialTheme.typography.bodyLarge
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        RangeSlider(
+            value = priceRange,
+            onValueChange = { priceRange = it},
+            valueRange = 0f..500f,
+            steps = 9,
+            onValueChangeFinished = {
+                println("precio seleccionado: ${priceRange.start} - ${priceRange.endInclusive}")
+            },
+            colors = SliderDefaults.colors(
+                activeTrackColor = MaterialTheme.colorScheme.primary,
+                inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                thumbColor = MaterialTheme.colorScheme.primary
+            )
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = "precio seleccionado: ${priceRange.start.toInt()} USD - ${priceRange.endInclusive.toInt()} USD",
+            style = MaterialTheme.typography.bodyLarge
+        )
+    }
+
 }
