@@ -8,6 +8,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,6 +22,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -64,6 +66,10 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Switch
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
+import androidx.compose.material3.TabRowDefaults
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -82,6 +88,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -89,6 +96,7 @@ import androidx.navigation.compose.rememberNavController
 // Importa el tema visual generado automáticamente para tu aplicación
 import com.example.componentesestructurales.ui.theme.ComponentesEstructuralesTheme
 import kotlinx.coroutines.launch
+import org.w3c.dom.Text
 import java.nio.file.WatchEvent
 
 // MainActivity es la pantalla o ventana principal donde inicia tu aplicación de Android
@@ -212,7 +220,8 @@ class MainActivity : ComponentActivity() {
                 //ScaffoldScreenNavHorizontal() // aqui se muestran los componentes generales
                 //ScaffoldScreenNavVertical() // esta es una copia del anterior pero mostrando la barra vertical de navegacion
                 //NavigationDrawerEjemplo() // muestra un menú desplegable de izquierda a derecha o al dar clic en la hamburguesa del menú.
-                EjemploJuegoConDrawerApp() // ejemplo de simulacion de pantallas de un juego de Kakuro, para ver el funcionamiento de scaffold y NavigationDrawer.
+                //EjemploJuegoConDrawerApp() // ejemplo de simulacion de pantallas de un juego de Kakuro, para ver el funcionamiento de scaffold y NavigationDrawer.
+                TabRowExample()
             }
         }
     }
@@ -1048,8 +1057,99 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    @Composable
+    fun TabRowExample() {
+        // Lista con los textos que se mostrarán en cada pestaña
+        val tabTitles = listOf("Inicio", "Favoritos", "Perfil")
 
-    //EJEMPLO DE JUEGO CON nAVIGATION DRAWER Y SCAFFOLD/
+        // Lista con los íconos vectoriales correspondientes a cada pestaña
+        val tabIcons = listOf(
+            Icons.Default.Home,
+            Icons.Default.Favorite,
+            Icons.Default.Person
+        )
+
+        // Estado que guarda el índice de la pestaña seleccionada actualmente (empieza en 0)
+        var selectedTabIndex by remember { mutableIntStateOf(0) }
+
+        // Lista de fuentes de interacción para detectar eventos táctiles de forma independiente en cada pestaña
+        val interactionSource = remember { List(tabTitles.size) { MutableInteractionSource() } }
+
+        // Estructura de pantalla Scaffold
+        Scaffold(
+            topBar = {
+                // El contenedor de las pestañas se ubica correctamente en la barra superior
+                TabRow(
+                    selectedTabIndex = selectedTabIndex, // Le dice al TabRow cuál pestaña resaltar
+                    modifier = Modifier.statusBarsPadding(), // Evita que el contenido se superponga con la barra de estado del sistema
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant, // Color de fondo del TabRow
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer, // Color por defecto para el contenido interno
+                    indicator = { tabPositions ->
+                        // Configuración de la línea indicadora que se mueve debajo de la pestaña seleccionada
+                        TabRowDefaults.SecondaryIndicator(
+                            modifier = Modifier
+                                .tabIndicatorOffset(tabPositions[selectedTabIndex]) // Mueve el indicador a la pestaña activa
+                                .height(3.dp), // Grosor de la línea indicadora
+                            color = MaterialTheme.colorScheme.primary // Color de la línea indicadora
+                        )
+                    },
+                    divider = {
+                        // Línea horizontal divisoria debajo de todo el TabRow
+                        HorizontalDivider(
+                            color = MaterialTheme.colorScheme.outlineVariant, // Color sutil para el divisor
+                            thickness = 1.dp // Grosor de la línea divisoria
+                        )
+                    }
+                ) {
+                    // Ciclo para crear cada una de las pestañas basadas en la lista de títulos
+                    tabTitles.forEachIndexed { index, title ->
+                        val enabled = index != 1 // para deshabilitar la pestaña 1
+
+                        Tab(
+                            selected = selectedTabIndex == index, // Evalúa si esta pestaña específica es la seleccionada
+                            onClick = {
+                                if (enabled) selectedTabIndex = index
+                            }, // Cambia el estado al índice actual al hacer clic
+                            modifier = Modifier.padding(horizontal = 4.dp), // Margen interno horizontal para espaciado
+                            enabled = enabled, // Define que la pestaña está activa y responde a clics
+                            text = {
+                                // Texto que se muestra dentro de la pestaña
+                                Text(text = title, style = MaterialTheme.typography.titleLarge, fontSize = 16.sp)
+                            },
+                            icon = {
+                                // Ícono que acompaña al texto de la pestaña
+                                Icon(imageVector = tabIcons[index], contentDescription = title)
+                            },
+                            selectedContentColor = MaterialTheme.colorScheme.primary, // Color del texto/ícono cuando está seleccionada
+                            unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant, // Color cuando NO está seleccionada
+                            interactionSource = interactionSource[index] // Asigna el detector de interacciones individual
+                        )
+                    }
+                }
+            }
+        ) { paddingValues ->
+            // CUERPO PRINCIPAL DEL SCAFFOLD: Aquí se renderiza el contenido real de las pantallas
+            Column(
+                modifier = Modifier
+                    .fillMaxSize() // Ocupa todo el espacio disponible en la pantalla
+                    .padding(paddingValues) // Aplica obligatoriamente el espaciado generado por el Scaffold (evita solapamientos)
+                    .padding(16.dp) // Añade un margen interno extra de 16dp para descolar el texto de los bordes
+            ) {
+                // Evaluamos cuál pestaña está activa y dibujamos el contenido correspondiente
+                when (selectedTabIndex) {
+                    0 -> Text("Pantalla de inicio", style = MaterialTheme.typography.bodyLarge)
+                    1 -> Text("Pantalla de favoritos", style = MaterialTheme.typography.bodyLarge)
+                    2 -> Text("Pantalla de perfil", style = MaterialTheme.typography.bodyLarge)
+                }
+            }
+        }
+    }
+
+
+    // ejemplo ScrolleableTabRow
+
+
+    //EJEMPLO DE JUEGO CON NAVIGATION DRAWER Y SCAFFOLD/
 
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
