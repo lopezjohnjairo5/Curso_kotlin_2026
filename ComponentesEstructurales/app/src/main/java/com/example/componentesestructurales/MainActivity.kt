@@ -64,6 +64,7 @@ import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Tab
@@ -217,11 +218,12 @@ class MainActivity : ComponentActivity() {
             // Aplica el tema de diseño (colores, tipografías) configurado para tu proyecto
             ComponentesEstructuralesTheme {
                 // Llama a la función que dibuja tu pantalla estructurada
-                //ScaffoldScreenNavHorizontal() // aqui se muestran los componentes generales
+                ScaffoldScreenNavHorizontal() // aqui se muestran los componentes generales
                 //ScaffoldScreenNavVertical() // esta es una copia del anterior pero mostrando la barra vertical de navegacion
                 //NavigationDrawerEjemplo() // muestra un menú desplegable de izquierda a derecha o al dar clic en la hamburguesa del menú.
                 //EjemploJuegoConDrawerApp() // ejemplo de simulacion de pantallas de un juego de Kakuro, para ver el funcionamiento de scaffold y NavigationDrawer.
-                TabRowExample()
+                //TabRowExample()
+                //ScrollTabRowEjemplo() // ejemplo con multiples pestañas
             }
         }
     }
@@ -1147,6 +1149,57 @@ class MainActivity : ComponentActivity() {
 
 
     // ejemplo ScrolleableTabRow
+
+    @Composable
+    fun ScrollTabRowEjemplo() {
+        val tabTitles = listOf("Inicio","Favoritos","Perfil","Configuración","Notificaciones")
+        var selectedTabIndex by remember { mutableIntStateOf(0) }
+
+        Scaffold(
+            topBar = {
+                ScrollableTabRow(
+                    selectedTabIndex = selectedTabIndex,
+                    modifier = Modifier.statusBarsPadding(),
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    edgePadding = 12.dp,
+                    indicator = { tabPositions ->
+                        TabRowDefaults.SecondaryIndicator(
+                            Modifier.tabIndicatorOffset(tabPositions[selectedTabIndex]),
+                            color = MaterialTheme.colorScheme.primary
+                        )
+
+                    }
+                ){
+                    tabTitles.forEachIndexed { index, title ->
+                        Tab(
+                            selected =  selectedTabIndex == index,
+                            onClick = { selectedTabIndex = index },
+                            text = {
+                                Text(
+                                    text = title,
+                                    style = MaterialTheme.typography.labelLarge
+                                )
+                            }
+                        )
+                    }
+                }
+            }
+        ) { paddingValues ->
+            Column(
+                modifier = Modifier.padding(paddingValues).padding(16.dp)
+            ) {
+                Text(
+                    text = "Pestaña: ${tabTitles[selectedTabIndex]}",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontSize = 16.sp
+
+                )
+            }
+
+
+        }
+    }
 
 
     //EJEMPLO DE JUEGO CON NAVIGATION DRAWER Y SCAFFOLD/
