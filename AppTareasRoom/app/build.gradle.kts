@@ -72,6 +72,8 @@ dependencies {
     ksp(libs.hilt.compiler) // KSP procesará tanto Room como Hilt de forma ultra rápida
     implementation(libs.hilt.navigation.compose)
 
+    implementation(libs.dataPreferences)
+
     implementation(libs.compose.material.icons.core)
     implementation(libs.compose.material.icons.extended)
 

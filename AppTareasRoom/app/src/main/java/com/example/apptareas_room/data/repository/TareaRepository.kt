@@ -23,6 +23,12 @@ class TareaRepository @Inject constructor(
         tareaDao.actualizarTarea(tarea)
     }
 
+    // retorna una tarea especifica buscada por ID, puede retornar TareaEntity o un valor NULO (?)
+    suspend fun obtenerTareaPorId (id: Int): TareaEntity?{
+        return tareaDao.obtenerTareaPorId(id)
+    }
+
+
     // elimina una tarea especifica de la BD, pasada por parametro
     suspend fun eliminarTarea(tarea: TareaEntity){
         tareaDao.eliminarTarea(tarea)
@@ -35,5 +41,10 @@ class TareaRepository @Inject constructor(
     // es asincrona gracias al FLOW, por lo cual no requiere que sea suspend
     fun obtenerTodasLasTareas() : Flow<List<TareaEntity>>{
         return tareaDao.obtenerTodasLasTareas()
+    }
+
+    // metodo para buscar una tarea que coincida con el texto ingresado en el input
+    suspend fun buscarTareas(query : String) : List <TareaEntity>{
+        return tareaDao.buscarTareas(query)
     }
 }

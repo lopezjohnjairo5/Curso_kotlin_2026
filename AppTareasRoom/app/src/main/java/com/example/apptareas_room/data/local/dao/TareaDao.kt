@@ -23,6 +23,10 @@ interface TareaDao{
     @Update
     suspend fun actualizarTarea(tarea: TareaEntity)
 
+    // consulta para obtener tarea por id
+    @Query("SELECT * FROM tareas WHERE id = :id")
+    suspend fun obtenerTareaPorId(id: Int): TareaEntity?
+
     // elimina una tarea de la BD local
     @Delete
     suspend fun eliminarTarea(tarea: TareaEntity) // elimina una tarea especifica de la BD
@@ -30,4 +34,9 @@ interface TareaDao{
     // borra todas las tareas de la BD local
     @Query("DELETE FROM tareas")
     suspend fun eliminarTodasLasTareas()
+
+    // consulta que permite buscar elementos que coincidan con la consulta obtenida por el teclado, el operador || (doble pipeline) sirve como concatenador, como el simbolo + en JS o punto (.) en PHP
+    @Query("SELECT * FROM tareas WHERE titulo LIKE '%' || :query || '%' OR descripcion LIKE '%' || :query || '%' ")
+    suspend fun buscarTareas(query : String): List<TareaEntity>
+
 }
