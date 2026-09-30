@@ -21,7 +21,9 @@ class MainActivity : ComponentActivity() {
             PermisosTheme {
                 // ejemplo de solicitud de permisos -- acceso a camara
                 //PantallaPrincipal()
-                CamaraScreen() // ejemplo de tomar foto con la camara
+                //CamaraScreen() // ejemplo de tomar foto con la camara
+                //GaleriaGetContentScreen() // ejemplo de seleccionar imagen de galeria
+                GaleriaPhotoPicker()
             }
         }
     }

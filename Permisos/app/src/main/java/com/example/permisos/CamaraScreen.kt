@@ -41,7 +41,6 @@ import androidx.core.content.FileProvider
 import coil.compose.rememberAsyncImagePainter
 import kotlinx.coroutines.launch
 import java.io.File
-import kotlin.contracts.contract
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
